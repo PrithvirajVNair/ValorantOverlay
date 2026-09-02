@@ -84,12 +84,18 @@ function parseHashParams() {
 // ---------------------------------------------------------------------------
 
 export default function App() {
-  // ---------------------------------------------------------------------------
-  // State
-  // ---------------------------------------------------------------------------
-  const [view, setView] = useState('setup');
-  const [apiKey, setApiKey] = useState(() => loadApiKey() || '');
-  const [config, setConfig] = useState(loadConfig());
+  // Initial state — parse URL hash synchronously for instant OBS load
+  const [view, setView] = useState(() =>
+    window.location.hash.startsWith('#overlay') ? 'overlay' : 'setup'
+  );
+  const [apiKey, setApiKey] = useState(() => {
+    const fromUrl = parseHashParams();
+    return fromUrl ? fromUrl.apiKey : loadApiKey() || '';
+  });
+  const [config, setConfig] = useState(() => {
+    const fromUrl = parseHashParams();
+    return fromUrl ? fromUrl.config : loadConfig();
+  });
 
   // ---------------------------------------------------------------------------
   // Initialization — parse URL params or localStorage, set view

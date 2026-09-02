@@ -4,21 +4,22 @@
 
 :root {
   /* VALORANT brand palette */
-  --val-dark:       #0f1923;
-  --val-dark-alt:   #1a2634;
-  --val-card:       rgba(15, 25, 35, 0.85);
-  --val-red:        #ff4655;
-  --val-red-dark:   #bd3944;
-  --val-red-glow:   rgba(255, 70, 85, 0.35);
-  --val-cream:      #ece8e1;
-  --val-cream-dim:  rgba(236, 232, 225, 0.6);
-  --val-border:     rgba(236, 232, 225, 0.1);
-  --val-success:    #2dd4a8;
-  --val-warning:    #f59e0b;
-  --val-error:      #ef4444;
+  --val-dark: #0f1923;
+  --val-dark-alt: #1a2634;
+  --val-card: rgba(15, 25, 35, 0.85);
+  --val-red: #ff4655;
+  --val-red-dark: #bd3944;
+  --val-red-glow: rgba(255, 70, 85, 0.35);
+  --val-cream: #ece8e1;
+  --val-cream-dim: rgba(236, 232, 225, 0.6);
+  --val-border: rgba(236, 232, 225, 0.1);
+  --val-success: #2dd4a8;
+  --val-warning: #f59e0b;
+  --val-error: #ef4444;
 
   /* Typography */
-  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-sans:
+    "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
   /* Spacing scale */
   --sp-1: 4px;
@@ -45,16 +46,19 @@
   font-size: 16px;
   line-height: 1.5;
   color: var(--val-cream);
-  background: var(--val-dark);
-  color-scheme: dark;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* When in overlay mode (transparent for OBS) */
-html.overlay-mode,
-html.overlay-mode body {
+/* 100% Transparent background for OBS Browser Source */
+html,
+body,
+#root {
   background: transparent !important;
+  background-color: transparent !important;
+}
+
+html.overlay-mode {
   overflow: hidden;
 }
 
@@ -92,16 +96,31 @@ body {
 
 /* ---- Utility animations ---- */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50%      { opacity: 0.6; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 @keyframes shimmer {
-  0%   { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 .fade-in {
@@ -112,7 +131,7 @@ body {
   background: linear-gradient(
     90deg,
     var(--val-dark-alt) 25%,
-    rgba(255,255,255,0.06) 50%,
+    rgba(255, 255, 255, 0.06) 50%,
     var(--val-dark-alt) 75%
   );
   background-size: 200% 100%;
