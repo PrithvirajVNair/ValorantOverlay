@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { AlertTriangle, Clock3, X } from 'lucide-react';
 
 const styles = {
   banner: {
@@ -64,7 +65,7 @@ export default function ErrorBanner({ error, retryIn = 0, onDismiss }) {
       style={{ ...styles.banner, ...variantStyle }}
       id="error-banner"
     >
-      <span style={styles.icon}>{isWarning ? '⏳' : '⚠️'}</span>
+      <span style={styles.icon}>{isWarning ? <Clock3 size={16} aria-hidden="true" /> : <AlertTriangle size={16} aria-hidden="true" />}</span>
       <span style={styles.message}>
         {error.message}
         {isWarning && retryIn > 0 && (
@@ -81,7 +82,7 @@ export default function ErrorBanner({ error, retryIn = 0, onDismiss }) {
           }}
           aria-label="Dismiss error"
         >
-          ✕
+          <X size={16} aria-hidden="true" />
         </button>
       )}
     </div>

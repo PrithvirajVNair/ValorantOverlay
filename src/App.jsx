@@ -1,187 +1,145 @@
 /**
- * App — Root component for the VALORANT Stream Overlay.
+ * App.jsx — Main Application Routing & OBS URL Generator.
  *
- * Routes between two views:
- *   1. SetupScreen — config panel (API key, player, region, display toggles)
- *   2. Overlay     — transparent OBS Browser Source view
- *
- * URL-based config for OBS:
- *   When the URL contains hash params (e.g. #overlay?key=...&name=...&tag=...),
- *   the overlay reads ALL config from the URL. This is how OBS Browser Source
- *   gets its config — it doesn't share localStorage with your regular browser.
- *
- *   The hash fragment is never sent to any server (it stays client-side).
+ * Supports game routing:
+ *   - /                 — Multi-game Hub
+ *   - /valorant         — VALORANT Sidebar Studio (Dashboard, Themes, Layouts, Preview)
+ *   - /pubg             — PUBG Setup Screen
+ *   - /overlay/valorant — VALORANT OBS Browser Source View
+ *   - /overlay/pubg     — PUBG OBS Browser Source View
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import SetupScreen from './components/SetupScreen';
-import Overlay from './components/Overlay';
-import { loadApiKey } from './utils/storage';
-import { loadConfig, saveConfig } from './utils/storage';
-
-// ---------------------------------------------------------------------------
-// URL hash helpers — encode/decode config for OBS Browser Source
-// ---------------------------------------------------------------------------
+import { useState, useEffect } from "react";
+import {
+  HashRouter,
+  Routes,
+  Route,
+  useNavigate,
+  useSearchParams,
+  useLocation,
+} from "react-router-dom";
+import GameSelector from "./components/GameSelector";
+import SetupScreen from "./components/SetupScreen";
+import PubgSetupScreen from "./components/PubgSetupScreen";
+import Overlay from "./components/Overlay";
+import PubgOverlay from "./components/PubgOverlay";
+import {
+  loadApiKey,
+  saveApiKey,
+  loadConfig,
+  saveConfig,
+  loadPubgApiKey,
+  savePubgApiKey,
+} from "./utils/storage";
 
 /**
- * Build an OBS-ready URL with all config encoded in the hash.
- * The hash fragment never leaves the browser (not sent to servers).
+ * Build an OBS-ready URL for VALORANT.
  */
 export function buildObsUrl(apiKey, config) {
   const params = new URLSearchParams();
-  params.set('key', apiKey);
-  params.set('name', config.playerName);
-  params.set('tag', config.playerTag);
-  params.set('region', config.region);
+  if (apiKey) params.set("key", apiKey);
+  params.set("name", config.playerName);
+  params.set("tag", config.playerTag);
+  params.set("region", config.region);
+  if (config.theme) params.set("theme", config.theme);
+  if (config.layout) params.set("layout", config.layout);
+  if (config.glassBlur) params.set("glassBlur", config.glassBlur);
+  if (config.refraction !== undefined)
+    params.set("refract", config.refraction ? "1" : "0");
+  if (config.refractionPower !== undefined)
+    params.set("power", String(config.refractionPower));
+  if (config.displacementScale !== undefined)
+    params.set("scale", String(config.displacementScale));
+  else if (config.lensZoom !== undefined)
+    params.set("zoom", String(config.lensZoom));
+  if (config.cornerRadius !== undefined)
+    params.set("radius", String(config.cornerRadius));
+  if (config.glowOpacity !== undefined)
+    params.set("glow", String(config.glowOpacity));
+  if (config.sheenSpeed) params.set("sheen", config.sheenSpeed);
+  if (config.borderGlow !== undefined)
+    params.set("border", config.borderGlow ? "1" : "0");
 
-  // Encode display fields as comma-separated list of enabled fields
-  const enabledFields = Object.entries(config.displayFields)
+  const enabledFields = Object.entries(config.displayFields || {})
     .filter(([, v]) => v)
     .map(([k]) => k);
-  params.set('show', enabledFields.join(','));
+  params.set("show", enabledFields.join(","));
 
-  return `${window.location.origin}${window.location.pathname}#overlay?${params.toString()}`;
+  return `${window.location.origin}${window.location.pathname}#/overlay/valorant?${params.toString()}`;
 }
 
 /**
- * Parse config from the URL hash (e.g. #overlay?key=...&name=...).
- * Returns null if no hash params are present.
+ * Build an OBS-ready URL for PUBG.
  */
-function parseHashParams() {
-  const hash = window.location.hash; // e.g. "#overlay?key=abc&name=PALS&tag=PRO"
-  const qIndex = hash.indexOf('?');
-  if (qIndex === -1) return null;
+export function buildPubgObsUrl(apiKey, config) {
+  const params = new URLSearchParams();
+  if (apiKey) params.set("key", apiKey);
+  params.set("name", config.playerName || "Player");
+  params.set("platform", config.platform || "steam");
 
-  const paramStr = hash.substring(qIndex + 1);
-  const params = new URLSearchParams(paramStr);
-
-  const key = params.get('key');
-  const name = params.get('name');
-  const tag = params.get('tag');
-  if (!key || !name || !tag) return null;
-
-  const showRaw = params.get('show') || 'rank,rr,season';
-  const showFields = showRaw.split(',');
-
-  return {
-    apiKey: key,
-    config: {
-      playerName: name,
-      playerTag: tag,
-      region: params.get('region') || 'na',
-      displayFields: {
-        rank: showFields.includes('rank'),
-        rr: showFields.includes('rr'),
-        season: showFields.includes('season'),
-        peakRank: showFields.includes('peakRank'),
-      },
-    },
+  const fields = config.displayFields || {
+    rank: true,
+    kd: true,
+    wins: true,
+    damage: true,
+    matches: true,
   };
+  const enabled = Object.entries(fields)
+    .filter(([, v]) => v)
+    .map(([k]) => k);
+  params.set("show", enabled.join(","));
+
+  return `${window.location.origin}${window.location.pathname}#/overlay/pubg?${params.toString()}`;
 }
 
-// ---------------------------------------------------------------------------
-// App component
-// ---------------------------------------------------------------------------
+/** Helper component to set html class in overlay mode */
+function RouteWatcher() {
+  const location = useLocation();
 
-export default function App() {
-  // Initial state — parse URL hash synchronously for instant OBS load
-  const [view, setView] = useState(() =>
-    window.location.hash.startsWith('#overlay') ? 'overlay' : 'setup'
-  );
-  const [apiKey, setApiKey] = useState(() => {
-    const fromUrl = parseHashParams();
-    return fromUrl ? fromUrl.apiKey : loadApiKey() || '';
-  });
-  const [config, setConfig] = useState(() => {
-    const fromUrl = parseHashParams();
-    return fromUrl ? fromUrl.config : loadConfig();
-  });
-
-  // ---------------------------------------------------------------------------
-  // Initialization — parse URL params or localStorage, set view
-  // ---------------------------------------------------------------------------
   useEffect(() => {
-    const hash = window.location.hash;
-
-    if (hash.startsWith('#overlay')) {
-      setView('overlay');
-
-      // If URL has params (OBS mode), override state from URL
-      const fromUrl = parseHashParams();
-      if (fromUrl) {
-        setApiKey(fromUrl.apiKey);
-        setConfig(fromUrl.config);
-      }
-    }
-
-    const onHashChange = () => {
-      if (window.location.hash.startsWith('#overlay')) {
-        setView('overlay');
-        const fromUrl = parseHashParams();
-        if (fromUrl) {
-          setApiKey(fromUrl.apiKey);
-          setConfig(fromUrl.config);
-        }
-      } else {
-        setView('setup');
-        document.documentElement.classList.remove('overlay-mode');
-      }
-    };
-    window.addEventListener('hashchange', onHashChange);
-    return () => window.removeEventListener('hashchange', onHashChange);
-  }, []);
-
-  // ---------------------------------------------------------------------------
-  // Toggle <html> class for transparent background in overlay mode
-  // ---------------------------------------------------------------------------
-  useEffect(() => {
-    if (view === 'overlay') {
-      document.documentElement.classList.add('overlay-mode');
+    if (location.pathname.startsWith("/overlay")) {
+      document.documentElement.classList.add("overlay-mode");
     } else {
-      document.documentElement.classList.remove('overlay-mode');
+      document.documentElement.classList.remove("overlay-mode");
     }
-  }, [view]);
+  }, [location.pathname]);
 
-  // ---------------------------------------------------------------------------
-  // Persist config on every change (for local browser use)
-  // ---------------------------------------------------------------------------
-  useEffect(() => {
-    saveConfig(config);
-  }, [config]);
+  return null;
+}
 
-  // ---------------------------------------------------------------------------
-  // Handlers
-  // ---------------------------------------------------------------------------
-  const handleApiKeyChange = useCallback((newKey) => {
-    setApiKey(newKey);
-  }, []);
+/** Game Selection / Hub Page (/) */
+function GameSelectionPage() {
+  const navigate = useNavigate();
+  return (
+    <GameSelector
+      onSelectGame={(gameId) => {
+        if (gameId === "valorant") navigate("/valorant");
+        else if (gameId === "pubg") navigate("/pubg");
+      }}
+    />
+  );
+}
 
-  const handleConfigChange = useCallback((newConfig) => {
+/** VALORANT Setup Page (/valorant) */
+function ValorantSetupPage() {
+  const navigate = useNavigate();
+  const [apiKey, setApiKey] = useState(() => loadApiKey() || "");
+  const [config, setConfig] = useState(() => loadConfig());
+
+  const handleConfigChange = (newConfig) => {
     setConfig(newConfig);
-  }, []);
+    saveConfig(newConfig);
+  };
 
-  const handleLaunch = useCallback(() => {
-    window.location.hash = 'overlay';
-    setView('overlay');
-  }, []);
+  const handleApiKeyChange = (newKey) => {
+    setApiKey(newKey);
+    if (newKey) saveApiKey(newKey);
+  };
 
-  const handleBack = useCallback(() => {
-    window.location.hash = '';
-    setView('setup');
-  }, []);
-
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
-  if (view === 'overlay') {
-    return (
-      <Overlay
-        apiKey={apiKey}
-        config={config}
-        onBack={handleBack}
-      />
-    );
-  }
+  const handleLaunch = () => {
+    const obsUrl = buildObsUrl(apiKey, config);
+    window.location.hash = obsUrl.split("#")[1];
+  };
 
   return (
     <SetupScreen
@@ -190,6 +148,195 @@ export default function App() {
       config={config}
       onConfigChange={handleConfigChange}
       onLaunch={handleLaunch}
+      onChangeGame={() => navigate("/")}
     />
+  );
+}
+
+/** PUBG Setup Page (/pubg) */
+function PubgSetupPage() {
+  const navigate = useNavigate();
+  const [apiKey, setApiKey] = useState(() => loadPubgApiKey() || "");
+  const [config, setConfig] = useState(() => {
+    const saved = loadConfig();
+    return {
+      playerName: saved.playerName || "",
+      platform: saved.platform || "steam",
+      displayFields: saved.displayFields || {
+        rank: true,
+        kd: true,
+        wins: true,
+        damage: true,
+        matches: true,
+      },
+    };
+  });
+
+  const handleConfigChange = (newConfig) => {
+    setConfig(newConfig);
+    saveConfig(newConfig);
+  };
+
+  const handleApiKeyChange = (newKey) => {
+    setApiKey(newKey);
+    if (newKey) savePubgApiKey(newKey);
+  };
+
+  const handleLaunch = () => {
+    const params = new URLSearchParams();
+    if (apiKey) params.set("key", apiKey);
+    if (config.playerName) params.set("name", config.playerName);
+    if (config.platform) params.set("platform", config.platform);
+    navigate(`/overlay/pubg?${params.toString()}`);
+  };
+
+  return (
+    <PubgSetupScreen
+      apiKey={apiKey}
+      onApiKeyChange={handleApiKeyChange}
+      config={config}
+      onConfigChange={handleConfigChange}
+      onLaunch={handleLaunch}
+      onChangeGame={() => navigate("/")}
+    />
+  );
+}
+
+/** VALORANT Overlay Page (/overlay/valorant) */
+function ValorantOverlayPage() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const savedConfig = loadConfig();
+
+  const apiKey = searchParams.get("key") || loadApiKey() || "";
+  const name = searchParams.get("name") || savedConfig.playerName || "";
+  const tag = searchParams.get("tag") || savedConfig.playerTag || "";
+  const region = searchParams.get("region") || savedConfig.region || "na";
+  const theme = searchParams.get("theme") || savedConfig.theme || "prism";
+  const layout = searchParams.get("layout") || savedConfig.layout || "card";
+  const glassBlur =
+    searchParams.get("glassBlur") || savedConfig.glassBlur || "high";
+  const refractRaw = searchParams.get("refract");
+  const refraction =
+    refractRaw !== null
+      ? refractRaw === "1"
+      : savedConfig.refraction !== undefined
+      ? savedConfig.refraction
+      : true;
+
+  const powerRaw = searchParams.get("power");
+  const refractionPower = powerRaw !== null ? parseInt(powerRaw, 10) : (savedConfig.refractionPower ?? 18);
+
+  const scaleRaw = searchParams.get("scale");
+  const zoomRaw = searchParams.get("zoom");
+  const displacementScale = scaleRaw !== null
+    ? parseInt(scaleRaw, 10)
+    : (savedConfig.displacementScale ?? Math.round((savedConfig.lensZoom ?? 1.0) * 100));
+  // Kept only so old shared OBS URLs using `zoom` keep their exact behavior.
+  const lensZoom = zoomRaw !== null ? parseFloat(zoomRaw) : (savedConfig.lensZoom ?? 1.0);
+  const radiusRaw = searchParams.get("radius");
+  const cornerRadius = radiusRaw !== null ? parseInt(radiusRaw, 10) : (savedConfig.cornerRadius ?? 20);
+
+  const glowRaw = searchParams.get("glow");
+  const glowOpacity = glowRaw !== null ? parseFloat(glowRaw) : (savedConfig.glowOpacity ?? 0.0);
+  const sheenSpeed = searchParams.get("sheen") || savedConfig.sheenSpeed || "normal";
+  const borderRaw = searchParams.get("border");
+  const borderGlow = borderRaw !== null ? borderRaw === "1" : (savedConfig.borderGlow !== undefined ? savedConfig.borderGlow : true);
+
+  const showRaw = searchParams.get("show") || "rank,rr,season,peakRank";
+  const showFields = showRaw.split(",");
+
+  const config = {
+    playerName: name,
+    playerTag: tag,
+    region,
+    theme,
+    layout,
+    glassBlur,
+    refraction,
+    refractionPower,
+    displacementScale,
+    cornerRadius,
+    lensZoom,
+    glowOpacity,
+    sheenSpeed,
+    borderGlow,
+    displayFields: {
+      rank: showFields.includes("rank"),
+      rr: showFields.includes("rr"),
+      season: showFields.includes("season"),
+      peakRank: showFields.includes("peakRank"),
+    },
+  };
+
+  return (
+    <Overlay
+      apiKey={apiKey}
+      config={config}
+      onBack={() => navigate("/valorant")}
+    />
+  );
+}
+
+/** PUBG Overlay Page (/overlay/pubg) */
+function PubgOverlayPage() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const savedConfig = loadConfig();
+
+  const apiKey = searchParams.get("key") || loadPubgApiKey() || "";
+  const name = searchParams.get("name") || savedConfig.playerName || "";
+  const platform =
+    searchParams.get("platform") || savedConfig.platform || "steam";
+  const showRaw = searchParams.get("show") || "rank,kd,wins,damage,matches";
+  const showFields = showRaw.split(",");
+
+  const config = {
+    playerName: name,
+    platform,
+    displayFields: {
+      rank: showFields.includes("rank"),
+      kd: showFields.includes("kd"),
+      wins: showFields.includes("wins"),
+      damage: showFields.includes("damage"),
+      matches: showFields.includes("matches"),
+    },
+  };
+
+  return (
+    <PubgOverlay
+      apiKey={apiKey}
+      config={config}
+      onBack={() => navigate("/pubg")}
+    />
+  );
+}
+
+/** Generic Fallback Overlay Page (/overlay) */
+function GenericOverlayPage() {
+  const [searchParams] = useSearchParams();
+  const game = searchParams.get("game");
+
+  if (game === "pubg") {
+    return <PubgOverlayPage />;
+  }
+
+  return <ValorantOverlayPage />;
+}
+
+export default function App() {
+  return (
+    <HashRouter>
+      <RouteWatcher />
+      <Routes>
+        <Route path="/" element={<GameSelectionPage />} />
+        <Route path="/valorant" element={<ValorantSetupPage />} />
+        <Route path="/pubg" element={<PubgSetupPage />} />
+        <Route path="/overlay/valorant" element={<ValorantOverlayPage />} />
+        <Route path="/overlay/pubg" element={<PubgOverlayPage />} />
+        <Route path="/overlay" element={<GenericOverlayPage />} />
+        <Route path="*" element={<GameSelectionPage />} />
+      </Routes>
+    </HashRouter>
   );
 }
