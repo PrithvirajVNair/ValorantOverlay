@@ -7,6 +7,7 @@ import { Crosshair, RefreshCw, Settings, Trophy } from 'lucide-react';
 import usePubgData from '../hooks/usePubgData';
 import { getPubgRankInfo } from '../data/pubgRanks.jsx';
 import ErrorBanner from './ErrorBanner';
+import ThemeRenderer from './themes/ThemeRenderer';
 
 const s = {
   root: {
@@ -221,68 +222,68 @@ export default function PubgOverlay({ apiKey, config, onBack }) {
 
       {/* 3. Live PUBG Card — shown once data is loaded */}
       {data && !showSkeleton && (
-        <div style={s.card} className="fade-in" id="overlay-card">
-          <div style={s.accentBar} />
-
-          {/* Rank Icon / Badge */}
-          <div
-            style={{
-              ...s.badgeSection,
-              background: rankInfo.bg,
-              border: `1px solid ${rankInfo.border}`,
-            }}
-            title={rankInfo.name}
-          >
-            {rankInfo.icon}
-          </div>
-
-          {/* Player Stats */}
-          <div style={s.infoSection}>
-            <div style={s.nameRow}>
-              <span style={s.playerName}>{data.name}</span>
-              <span style={s.platformTag}>{data.platform || 'STEAM'}</span>
+        <ThemeRenderer theme={config?.theme || "tactical"} config={config} rankColor={rankInfo?.color}>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-3)", padding: "10px 14px" }} id="overlay-card">
+            {/* Rank Icon / Badge */}
+            <div
+              style={{
+                ...s.badgeSection,
+                background: rankInfo.bg,
+                border: `1px solid ${rankInfo.border}`,
+              }}
+              title={rankInfo.name}
+            >
+              {rankInfo.icon}
             </div>
 
-            <div style={s.metaRow}>
-              {display.rank !== false && (
-                <span
-                  style={{
-                    ...s.metaPill,
-                    color: rankInfo.color,
-                    border: `1px solid ${rankInfo.border}`,
-                    background: rankInfo.bg,
-                    fontWeight: 700,
-                  }}
-                >
-                  {data.rank || 'Unranked'}
-                </span>
-              )}
+            {/* Player Stats */}
+            <div style={s.infoSection}>
+              <div style={s.nameRow}>
+                <span style={s.playerName}>{data.name}</span>
+                <span style={s.platformTag}>{data.platform || 'STEAM'}</span>
+              </div>
 
-              {display.kd !== false && (
-                <span style={s.metaPillKd}>K/D {data.kd}</span>
-              )}
+              <div style={s.metaRow}>
+                {display.rank !== false && (
+                  <span
+                    style={{
+                      ...s.metaPill,
+                      color: rankInfo.color,
+                      border: `1px solid ${rankInfo.border}`,
+                      background: rankInfo.bg,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {data.rank || 'Unranked'}
+                  </span>
+                )}
 
-              {display.wins !== false && (
-                <span style={s.metaPill}><Trophy size={12} aria-hidden="true" /> {data.wins} WINS</span>
-              )}
+                {display.kd !== false && (
+                  <span style={s.metaPillKd}>K/D {data.kd}</span>
+                )}
 
-              {display.damage !== false && (
-                <span style={s.metaPill}><Crosshair size={12} aria-hidden="true" /> {data.avgDamage} DMG</span>
-              )}
+                {display.wins !== false && (
+                  <span style={s.metaPill}><Trophy size={12} aria-hidden="true" /> {data.wins} WINS</span>
+                )}
 
-              {display.matches !== false && (
-                <span style={s.metaPill}>MATCHES {data.matches}</span>
-              )}
+                {display.damage !== false && (
+                  <span style={s.metaPill}><Crosshair size={12} aria-hidden="true" /> {data.avgDamage} DMG</span>
+                )}
+
+                {display.matches !== false && (
+                  <span style={s.metaPill}>MATCHES {data.matches}</span>
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* Updated timestamp */}
-          <div style={s.timeSection}>
-            <span style={s.timeLabel}>{updatedLabel}</span>
-          </div>
+            {/* Updated timestamp */}
+            <div style={s.timeSection}>
+              <span style={s.timeLabel}>{updatedLabel}</span>
+            </div>
 
-          {loading && <div style={s.loadingDot} />}
-        </div>
+            {loading && <div style={s.loadingDot} />}
+          </div>
+        </ThemeRenderer>
       )}
 
       {!loading && data && (

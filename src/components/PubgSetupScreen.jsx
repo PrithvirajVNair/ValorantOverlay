@@ -3,9 +3,11 @@
  */
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Check, Copy, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Check, Copy, ExternalLink, Sliders, Gem, Zap, Shield, Maximize2, Gamepad2 } from 'lucide-react';
 import { loadPubgApiKey, savePubgApiKey, clearPubgApiKey } from '../utils/storage';
+import { THEME_COMPONENTS } from '../data/themeRegistry';
 import ErrorBanner from './ErrorBanner';
+import ThemeCustomizationModal from './ThemeCustomizationModal';
 
 const s = {
   container: {
@@ -258,6 +260,7 @@ export default function PubgSetupScreen({
   const [error, setError] = useState(null);
   const [keyValid, setKeyValid] = useState(Boolean(apiKey || loadPubgApiKey()));
   const [copied, setCopied] = useState(false);
+  const [customizingTheme, setCustomizingTheme] = useState(null);
 
   useEffect(() => {
     const saved = apiKey || loadPubgApiKey();
@@ -543,6 +546,124 @@ export default function PubgSetupScreen({
           </div>
         </div>
 
+        {/* 4. Theme Component Selection */}
+        <div
+          style={{
+            ...s.section,
+            opacity: keyValid ? 1 : 0.4,
+            pointerEvents: keyValid ? 'auto' : 'none',
+          }}
+        >
+          <h2 style={s.sectionTitle}>
+            <span style={s.sectionNumber}>4</span> VISUAL THEME COMPONENT
+          </h2>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px' }}>
+            {THEME_COMPONENTS.map((tc) => {
+              const isActive = (config.theme || 'glass') === tc.id;
+              const IconComp = { Gem, Zap, Shield, Maximize2, Gamepad2 }[tc.icon] || Gem;
+
+              return (
+                <div
+                  key={tc.id}
+                  style={{
+                    flex: '1 1 320px',
+                    maxWidth: '380px',
+                    padding: '12px',
+                    borderRadius: 'var(--radius-md)',
+                    border: isActive ? '1px solid #f39c12' : '1px solid rgba(255,255,255,0.1)',
+                    background: isActive ? 'rgba(243, 156, 18, 0.15)' : 'rgba(0,0,0,0.25)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: '10px',
+                  }}
+                  id={`pubg-theme-card-${tc.id}`}
+                >
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                        <IconComp size={16} color="#f39c12" style={{ flexShrink: 0 }} />
+                        <strong style={{ fontSize: 13, color: '#fff', whiteSpace: 'nowrap' }}>{tc.name}</strong>
+                      </div>
+                      <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: 4, color: '#fff', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                        {tc.badge}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', margin: 0, lineHeight: 1.3 }}>
+                      {tc.desc}
+                    </p>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {isActive ? (
+                      <div
+                        style={{
+                          flex: 1,
+                          padding: '5px 10px',
+                          borderRadius: '6px',
+                          background: 'rgba(243, 156, 18, 0.25)',
+                          border: '1px solid #f39c12',
+                          color: '#f39c12',
+                          fontSize: 11,
+                          fontWeight: 700,
+                          textAlign: 'center',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        <Check size={12} /> Active
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onConfigChange({ ...config, theme: tc.id })}
+                        style={{
+                          flex: 1,
+                          padding: '5px 10px',
+                          borderRadius: '6px',
+                          background: 'rgba(243, 156, 18, 0.15)',
+                          border: '1px solid rgba(243, 156, 18, 0.4)',
+                          color: '#f39c12',
+                          fontSize: 11,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                        id={`pubg-set-active-${tc.id}`}
+                      >
+                        Set Active
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => setCustomizingTheme(tc.id)}
+                      style={{
+                        padding: '5px 10px',
+                        borderRadius: '6px',
+                        background: 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        color: '#fff',
+                        fontSize: 11,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                      title={`Customize ${tc.name}`}
+                      id={`pubg-customize-${tc.id}`}
+                    >
+                      <Sliders size={12} /> Customize
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Launch Button */}
         <button
           type="button"
@@ -587,6 +708,14 @@ export default function PubgSetupScreen({
           <p style={s.hint}>Enter a PUBG player IGN to continue.</p>
         )}
       </div>
+
+      <ThemeCustomizationModal
+        isOpen={Boolean(customizingTheme)}
+        themeId={customizingTheme}
+        config={config}
+        onConfigChange={onConfigChange}
+        onClose={() => setCustomizingTheme(null)}
+      />
     </div>
   );
 }

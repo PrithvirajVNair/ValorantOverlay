@@ -9,12 +9,13 @@
  */
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, Check, ChevronDown, ChevronUp, Copy, CreditCard, Gem, LayoutDashboard, Palette, PanelTop, Radio, Shield, Sparkles } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, ChevronUp, Copy, CreditCard, Gamepad2, Gem, LayoutDashboard, Maximize2, Palette, PanelTop, Radio, Shield, Sliders, Sparkles, Zap } from "lucide-react";
 import { loadApiKey, saveApiKey, clearApiKey } from "../utils/storage";
 import { buildObsUrl } from "../App";
-import { VALORANT_LAYOUTS, VALORANT_THEMES } from "../data/themeRegistry";
+import { VALORANT_LAYOUTS, VALORANT_THEMES, THEME_COMPONENTS } from "../data/themeRegistry";
 import ErrorBanner from "./ErrorBanner";
 import Overlay from "./Overlay";
+import ThemeCustomizationModal from "./ThemeCustomizationModal";
 
 const REGIONS = [
   { value: "na", label: "North America (NA)" },
@@ -55,7 +56,14 @@ export default function SetupScreen({
   const [keyValid, setKeyValid] = useState(!!apiKey);
   const [copied, setCopied] = useState(false);
   const [previewBg, setPreviewBg] = useState("haven");
-  const [liquidGlassExpanded, setLiquidGlassExpanded] = useState(true);
+  const [customizingTheme, setCustomizingTheme] = useState(null);
+  const [previewTheme, setPreviewTheme] = useState(config.theme || "glass");
+
+  useEffect(() => {
+    if (config.theme) {
+      setPreviewTheme(config.theme);
+    }
+  }, [config.theme]);
 
   useEffect(() => {
     if (apiKey) {
@@ -255,241 +263,171 @@ export default function SetupScreen({
                 </div>
 
                 <div style={{ ...s.previewCanvas, background: activeBackdrop.bg }}>
-                  <Overlay apiKey={apiKey} config={config} backdropBg={activeBackdrop?.bg} onBack={() => {}} />
+                  <Overlay apiKey={apiKey} config={{ ...config, theme: previewTheme }} backdropBg={activeBackdrop?.bg} onBack={() => {}} />
                 </div>
               </section>
 
-              {/* PRIMARY CORE THEME ENGINE SELECTOR: APPLE LIQUID GLASS */}
+              {/* TOP-LEVEL THEME COMPONENTS SELECTOR */}
               <section style={s.sectionBox}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <h3 style={{ ...s.sectionHeader, margin: 0 }}>Active Core Theme Architecture</h3>
-                  <span style={s.badgePill}>Core Engine</span>
+                  <h3 style={{ ...s.sectionHeader, margin: 0 }}>Select Visual Theme Component</h3>
+                  <span style={s.badgePill}>React Engine</span>
                 </div>
 
-                {/* Primary Theme Card: Apple Liquid Glass */}
-                <div
-                  onClick={() => setLiquidGlassExpanded(!liquidGlassExpanded)}
-                  style={{
-                    ...s.coreThemeCard,
-                    ...(liquidGlassExpanded ? s.coreThemeCardActive : {}),
-                  }}
-                  id="core-theme-liquid-glass-card"
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                    <div style={s.coreThemeIcon}><Gem size={24} aria-hidden="true" /></div>
-                    <div>
-                      <h4 style={{ fontSize: 16, fontWeight: 800, color: "#fff", margin: 0 }}>
-                        Glass Theme
-                      </h4>
-                      <p style={{ fontSize: 12, color: "rgba(255,255,255,0.65)", margin: "2px 0 0 0" }}>
-                        Translucent specular glass with animated caustics & dynamic liquid refraction maps.
-                      </p>
-                    </div>
-                  </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", marginTop: "14px" }}>
+                  {THEME_COMPONENTS.map((tc) => {
+                    const IconComp = { Gem, Zap, Shield, Maximize2, Gamepad2 }[tc.icon] || Gem;
+                    const isActive = (config.theme || "glass") === tc.id;
+                    const isPreviewing = previewTheme === tc.id || (!previewTheme && tc.id === "glass");
 
-                  <button type="button" style={s.btnToggleExpand}>
-                    {liquidGlassExpanded ? <><ChevronUp size={14} aria-hidden="true" /> Customizing</> : <><ChevronDown size={14} aria-hidden="true" /> Click to Customize</>}
-                  </button>
-                </div>
-
-                {/* EXPANDABLE DETAILS UNDER APPLE LIQUID GLASS THEME */}
-                {liquidGlassExpanded && (
-                  <div style={s.expandedDetailsContainer} className="fade-in">
-                    {/* 1. VISUAL COLOR PRESETS UNDER LIQUID GLASS */}
-                    <div style={s.subSection}>
-                      <h4 style={s.subHeader}>1. Visual Color Presets</h4>
-                      <div style={s.themeGrid}>
-                        {VALORANT_THEMES.map((t) => (
-                          <button
-                            key={t.id}
-                            type="button"
-                            onClick={() => handleFieldChange("theme", t.id)}
-                            style={{
-                              ...s.themeCard,
-                              ...(config.theme === t.id ? s.themeCardActive : {}),
-                            }}
-                            id={`theme-btn-${t.id}`}
-                          >
-                            <div style={{ ...s.themeSwatch, background: t.color }} />
-                            <div style={{ textAlign: "left" }}>
-                              <strong style={{ display: "block", fontSize: 13, color: "#fff" }}>
-                                {t.name}
-                              </strong>
-                              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}>
-                                {t.desc}
-                              </span>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* 2. LAYOUT DESIGNS UNDER LIQUID GLASS */}
-                    <div style={s.subSection}>
-                      <h4 style={s.subHeader}>2. HUD Layout Designs & Structure</h4>
-                      <div style={s.layoutGrid}>
-                        {VALORANT_LAYOUTS.map((layoutItem) => (
-                          <button
-                            key={layoutItem.id}
-                            type="button"
-                            onClick={() => handleFieldChange("layout", layoutItem.id)}
-                            style={{
-                              ...s.layoutCard,
-                              ...(config.layout === layoutItem.id ||
-                              (!config.layout && layoutItem.id === "card")
-                                ? s.layoutCardActive
-                                : {}),
-                            }}
-                            id={`layout-btn-${layoutItem.id}`}
-                          >
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                {(() => {
-                                  const LayoutIcon = LAYOUT_ICONS[layoutItem.icon] || CreditCard;
-                                  return <LayoutIcon size={18} aria-hidden="true" />;
-                                })()}
-                                <strong style={{ fontSize: 13, color: "#fff" }}>{layoutItem.name}</strong>
+                    return (
+                      <div
+                        key={tc.id}
+                        onClick={() => setPreviewTheme(tc.id)}
+                        style={{
+                          ...s.coreThemeCard,
+                          flex: "1 1 320px",
+                          maxWidth: "380px",
+                          ...(isActive ? s.coreThemeCardActive : {}),
+                          ...(isPreviewing && !isActive
+                            ? {
+                                border: "2px solid #38bdf8",
+                                boxShadow: "0 0 16px rgba(56, 189, 248, 0.35)",
+                                background: "rgba(56, 189, 248, 0.08)",
+                              }
+                            : {}),
+                          padding: "16px",
+                          display: "flex",
+                          flexDirection: "column",
+                          justifyContent: "space-between",
+                          gap: "12px",
+                          cursor: "pointer",
+                          transition: "all 0.2s ease",
+                        }}
+                        id={`theme-card-${tc.id}`}
+                      >
+                        <div>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", marginBottom: "8px", gap: "8px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+                              <div style={{ ...s.coreThemeIcon, width: 34, height: 34, flexShrink: 0 }}>
+                                <IconComp size={18} aria-hidden="true" />
                               </div>
-                              <span style={s.badgePill}>{layoutItem.badge}</span>
+                              <h4 style={{ fontSize: 14, fontWeight: 800, color: "#fff", margin: 0, whiteSpace: "nowrap" }}>
+                                {tc.name}
+                              </h4>
                             </div>
-                            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.65)", textAlign: "left", marginTop: 4 }}>
-                              {layoutItem.desc}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* 3. FINE-TUNING CONTROLS */}
-                    <div style={s.subSection}>
-                      <h4 style={s.subHeader}>3. Fine-Tuning & Edits</h4>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
-                        {/* Glass Blur */}
-                        <div style={s.inputGroup}>
-                          <label style={s.label}>Frosted Glass Blur</label>
-                          <select
-                            value={config.glassBlur || "high"}
-                            onChange={(e) => handleFieldChange("glassBlur", e.target.value)}
-                            style={s.select}
-                            id="blur-select"
-                          >
-                            <option value="high">Max Blur (12px)</option>
-                            <option value="medium">Medium Blur (8px)</option>
-                            <option value="low">Subtle Blur (4px)</option>
-                          </select>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+                              {isPreviewing && !isActive && (
+                                <span
+                                  style={{
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    background: "rgba(56, 189, 248, 0.2)",
+                                    border: "1px solid rgba(56, 189, 248, 0.5)",
+                                    color: "#38bdf8",
+                                    padding: "2px 6px",
+                                    borderRadius: "4px",
+                                    whiteSpace: "nowrap",
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  Previewing
+                                </span>
+                              )}
+                              <span style={s.badgePill}>{tc.badge}</span>
+                            </div>
+                          </div>
+                          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.65)", margin: 0, lineHeight: 1.4 }}>
+                            {tc.desc}
+                          </p>
                         </div>
 
-                        {/* Border Glass Lens Distortion */}
-                        <div style={s.inputGroup}>
-                          <label style={s.label}>Border Glass Lens Distortion</label>
+                        {/* CARD ACTION BUTTONS: SET ACTIVE & CUSTOMIZE MODAL */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
+                          {isActive ? (
+                            <div
+                              style={{
+                                flex: 1,
+                                padding: "6px 12px",
+                                borderRadius: "8px",
+                                background: "rgba(45, 212, 168, 0.15)",
+                                border: "1px solid rgba(45, 212, 168, 0.4)",
+                                color: "#2dd4bf",
+                                fontSize: 12,
+                                fontWeight: 700,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: "4px",
+                              }}
+                            >
+                              <Check size={14} aria-hidden="true" /> Active
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleFieldChange("theme", tc.id);
+                                setPreviewTheme(tc.id);
+                              }}
+                              style={{
+                                flex: 1,
+                                padding: "6px 12px",
+                                borderRadius: "8px",
+                                background: "rgba(255, 70, 85, 0.15)",
+                                border: "1px solid rgba(255, 70, 85, 0.4)",
+                                color: "#ff4655",
+                                fontSize: 12,
+                                fontWeight: 700,
+                                cursor: "pointer",
+                              }}
+                              id={`set-active-btn-${tc.id}`}
+                            >
+                              Set Active
+                            </button>
+                          )}
+
                           <button
                             type="button"
-                            onClick={() => handleFieldChange("refraction", !config.refraction)}
-                            style={{
-                              ...s.toggleChip,
-                              background:
-                                config.refraction !== false
-                                  ? "rgba(45, 212, 168, 0.2)"
-                                  : "rgba(255,255,255,0.06)",
-                              borderColor:
-                                config.refraction !== false
-                                  ? "var(--val-success)"
-                                  : "var(--val-border)",
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPreviewTheme(tc.id);
+                              setCustomizingTheme(tc.id);
                             }}
-                            id="toggle-refraction-btn"
+                            style={{
+                              padding: "6px 12px",
+                              borderRadius: "8px",
+                              background: "rgba(255,255,255,0.06)",
+                              border: "1px solid rgba(255,255,255,0.15)",
+                              color: "#fff",
+                              fontSize: 12,
+                              fontWeight: 600,
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "6px",
+                            }}
+                            title={`Customize ${tc.name}`}
+                            id={`customize-btn-${tc.id}`}
                           >
-                            {config.refraction !== false ? <><Sparkles size={14} aria-hidden="true" /> Glass Lens ON</> : "Off"}
+                            <Sliders size={14} aria-hidden="true" /> Customize
                           </button>
                         </div>
-
-                        {/* Border Glass Lens Distortion Strength Slider */}
-                        <div style={s.inputGroup}>
-                          <label style={s.label}>
-                            Border Lens Distortion Strength ({config.refractionPower ?? 18})
-                          </label>
-                          <input
-                            type="range"
-                            min="5"
-                            max="50"
-                            step="1"
-                            value={config.refractionPower ?? 18}
-                            disabled={config.refraction === false}
-                            onChange={(e) =>
-                              handleFieldChange("refractionPower", parseInt(e.target.value, 10))
-                            }
-                            style={{
-                              accentColor: "var(--val-red)",
-                              width: "100%",
-                              cursor: config.refraction !== false ? "pointer" : "not-allowed",
-                              opacity: config.refraction !== false ? 1 : 0.4,
-                            }}
-                            id="refraction-power-slider"
-                          />
-                        </div>
-
-                        {/* Glass Lens Displacement Scale Slider */}
-                        <div style={s.inputGroup}>
-                          <label style={s.label}>
-                            Displacement Scale ({config.displacementScale ?? Math.round((config.lensZoom ?? 1.0) * 100)})
-                          </label>
-                          <input
-                            type="range"
-                            min="100"
-                            max="200"
-                            step="1"
-                            value={config.displacementScale ?? Math.round((config.lensZoom ?? 1.0) * 100)}
-                            disabled={config.refraction === false}
-                            onChange={(e) =>
-                              handleFieldChange("displacementScale", parseInt(e.target.value, 10))
-                            }
-                            style={{
-                              accentColor: "var(--val-red)",
-                              width: "100%",
-                              cursor: config.refraction !== false ? "pointer" : "not-allowed",
-                              opacity: config.refraction !== false ? 1 : 0.4,
-                            }}
-                            id="displacement-scale-slider"
-                          />
-                        </div>
-
-                        <div style={s.inputGroup}>
-                          <label style={s.label}>
-                            Overlay Corner Radius ({config.cornerRadius ?? 20}px)
-                          </label>
-                          <input
-                            type="range"
-                            min="0"
-                            max="20"
-                            step="1"
-                            value={config.cornerRadius ?? 20}
-                            onChange={(e) =>
-                              handleFieldChange("cornerRadius", parseInt(e.target.value, 10))
-                            }
-                            style={{ accentColor: "var(--val-red)", width: "100%", cursor: "pointer" }}
-                            id="overlay-radius-slider"
-                          />
-                        </div>
-
-                        {/* Sheen Speed */}
-                        <div style={s.inputGroup}>
-                          <label style={s.label}>Sweep Light Sheen Speed</label>
-                          <select
-                            value={config.sheenSpeed || "normal"}
-                            onChange={(e) => handleFieldChange("sheenSpeed", e.target.value)}
-                            style={s.select}
-                            id="sheen-select"
-                          >
-                            <option value="fast">Fast Sweep (3s)</option>
-                            <option value="normal">Normal Sweep (6s)</option>
-                            <option value="slow">Slow Sweep (10s)</option>
-                            <option value="off">Disabled</option>
-                          </select>
-                        </div>
                       </div>
-                    </div>
-                  </div>
-                )}
+                    );
+                  })}
+                </div>
               </section>
+
+              {/* DYNAMIC THEME CUSTOMIZATION MODAL */}
+              <ThemeCustomizationModal
+                isOpen={Boolean(customizingTheme)}
+                themeId={customizingTheme}
+                config={config}
+                onConfigChange={onConfigChange}
+                onClose={() => setCustomizingTheme(null)}
+              />
             </div>
           )}
 
@@ -1057,6 +995,9 @@ const s = {
     borderRadius: "6px",
     background: "rgba(255,255,255,0.12)",
     color: "rgba(255,255,255,0.9)",
+    whiteSpace: "nowrap",
+    flexShrink: 0,
+    display: "inline-block",
   },
   toggleChip: {
     padding: "10px 14px",

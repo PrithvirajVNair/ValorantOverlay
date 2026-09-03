@@ -19,7 +19,8 @@ import { RefreshCw, Settings, TrendingUp } from "lucide-react";
 import RankBadge from "./RankBadge";
 import ErrorBanner from "./ErrorBanner";
 import usePlayerData from "../hooks/usePlayerData";
-import { getRankInfo } from "../data/ranks";
+import { getRankInfo, getRankIconUrl } from "../data/ranks";
+import ThemeRenderer from "./themes/ThemeRenderer";
 
 // Demo data shown when no API connection is configured
 const DEMO_DATA = {
@@ -38,6 +39,11 @@ const DEMO_DATA = {
  * @param {Function} props.onBack — return to setup
  */
 export default function Overlay({ apiKey, config = {}, backdropBg, onBack }) {
+  // Resolve active theme ID and theme-scoped configuration parameters
+  const activeThemeId = config.theme || "glass";
+  const themeScopedConfig = config.themeConfigs?.[activeThemeId] || {};
+  const mergedConfig = { ...config, ...themeScopedConfig };
+
   const {
     displayFields = { rank: true, rr: true, season: true, peakRank: true },
     theme = "prism",
@@ -54,7 +60,7 @@ export default function Overlay({ apiKey, config = {}, backdropBg, onBack }) {
     playerName,
     playerTag,
     region,
-  } = config || {};
+  } = mergedConfig;
 
   const {
     playerData,
@@ -129,42 +135,28 @@ export default function Overlay({ apiKey, config = {}, backdropBg, onBack }) {
   const displacementMultiplier = normalizedDisplacementScale / 100;
   const effectiveScale = normalizedPower * displacementMultiplier * 1.5;
 
-  return (
-    <div style={{ ...s.root, "--overlay-radius": currentRadius }} className={`${themeClass} overlay-surface`}>
-      {/* SVG Liquid Refraction Filter */}
-      {refraction && (
-        <svg
-          style={{ position: "absolute", width: 0, height: 0, overflow: "hidden" }}
-          aria-hidden="true"
-        >
-          <filter
-            id="liquid-glass-refract"
-            x="-20%"
-            y="-20%"
-            width="140%"
-            height="140%"
-            filterUnits="objectBoundingBox"
-          >
-            <feTurbulence
-              type="fractalNoise"
-              baseFrequency="0.012"
-              numOctaves="2"
-              result="noise"
-            />
-            <feDisplacementMap
-              in="SourceGraphic"
-              in2="noise"
-              scale={effectiveScale}
-              xChannelSelector="R"
-              yChannelSelector="G"
-            />
-          </filter>
-        </svg>
-      )}
+  const playerDetails = {
+    playerName: data.account?.name || config.playerName,
+    playerTag: data.account?.tag || config.playerTag,
+    tierId,
+    tierName: tierName || rankInfo?.name,
+    rr,
+    lastChange,
+    rankInfo,
+    rankIconUrl: getRankIconUrl(tierId),
+    currentSeason,
+    peak,
+    updatedLabel,
+    displayFields,
+    layout,
+    isDemo,
+    loading,
+  };
 
-      {/* Main Glass Card Wrapper */}
-      <div style={s.cardWrapper} id="overlay-card-wrapper">
-        {/* Settings gear */}
+  return (
+    <div style={s.root}>
+      {/* Settings gear button */}
+      {onBack && (
         <button
           type="button"
           onClick={onBack}
@@ -175,303 +167,19 @@ export default function Overlay({ apiKey, config = {}, backdropBg, onBack }) {
         >
           <Settings size={15} aria-hidden="true" />
         </button>
+      )}
 
-        {/* Outer Liquid Glass Border Ring */}
-        <div
-          className="overlay-border-ring"
-          style={{
-            ...s.borderRing,
-            borderRadius: currentRadius,
-            background: borderGlow
-              ? "var(--theme-border-gradient, linear-gradient(135deg, rgba(255,255,255,0.5), rgba(255,70,85,0.4)))"
-              : "rgba(255,255,255,0.15)",
-          }}
-        >
-          {/* Main Glass Panel */}
-          <div
-            style={{
-              ...s.card,
-              ...(layout === "capsule"
-                ? s.cardCapsule
-                : layout === "banner"
-                ? s.cardBanner
-                : layout === "minimal"
-                ? s.cardMinimal
-                : s.cardStandard),
-              ...(isDemo ? s.cardDemo : {}),
-              borderRadius: currentRadius,
-            }}
-            className="fade-in overlay-card-surface"
-            id="overlay-card"
-          >
-            {/* Base Glass Backdrop Blur Layer */}
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                borderRadius: currentRadius,
-                clipPath: `inset(0 round ${currentRadius})`,
-                background: "var(--theme-glass-tint, var(--glass-bg))",
-                backdropFilter: `blur(${backdropBlurValue}) saturate(210%) contrast(108%)`,
-                WebkitBackdropFilter: `blur(${backdropBlurValue}) saturate(210%) contrast(108%)`,
-                pointerEvents: "none",
-                zIndex: 0,
-                overflow: "hidden",
-              }}
-            />
-
-            {/* Border Glass Lens Physical Distortion & Displacement for Live Backdrop */}
-            {refraction && (
-              <div
-                className="overlay-backdrop-layer"
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  borderRadius: currentRadius,
-                  clipPath: `inset(0 round ${currentRadius})`,
-                  background: "transparent",
-                  // edit brightness for whiteline opacity
-                  backdropFilter: `url(#liquid-glass-refract) blur(1.5px) contrast(${110 + Math.round(effectiveScale * 1.2)}%) brightness(55%) saturate(210%)`,
-                  WebkitBackdropFilter: `url(#liquid-glass-refract) blur(1.5px) contrast(${110 + Math.round(effectiveScale * 1.2)}%) brightness(55%) saturate(210%)`,
-                  boxShadow: `
-                    inset 0 0 0 1.5px rgba(255, 255, 255, 0.35),
-                    inset 0 0 ${Math.min(42, Math.round(16 + (displacementMultiplier - 1.0) * 26))}px 3px rgba(255, 255, 255, 0.24),
-                    inset 0 -12px 20px -14px rgba(0, 0, 0, 0.20)
-                  `,
-                  maskImage: "radial-gradient(ellipse at center, transparent 55%, black 88%)",
-                  WebkitMaskImage: "radial-gradient(ellipse at center, transparent 55%, black 88%)",
-                  pointerEvents: "none",
-                  zIndex: 0,
-                  overflow: "hidden",
-                }}
-              />
-            )}
-            {/* Top Light Specular Highlight Bevel */}
-            <div
-              style={{
-                ...s.specularBevel,
-                borderRadius:
-                  `${currentRadius} ${currentRadius} 0 0`,
-              }}
-            />
-
-            {/* Dynamic Sweep Light Sheen */}
-            {sheenSpeed !== "off" && (
-              <div
-                className="overlay-lens-layer"
-                style={{
-                  ...s.lightSheen,
-                  animationDuration: sheenDuration,
-                }}
-              />
-            )}
-
-            {/* Skeleton state */}
-            {showSkeleton && (
-              <div style={s.skeletonRow}>
-                <div
-                  className="skeleton-glass"
-                  style={{ width: 44, height: 44, borderRadius: "12px" }}
-                />
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <div
-                    className="skeleton-glass"
-                    style={{ width: 110, height: 16 }}
-                  />
-                  <div
-                    className="skeleton-glass"
-                    style={{ width: 70, height: 12 }}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Real Content */}
-            {!showSkeleton && (
-              <>
-                {/* MINIMAL LAYOUT */}
-                {layout === "minimal" ? (
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    {displayFields.rank && (
-                      <RankBadge
-                        tierId={tierId}
-                        tierName={tierName}
-                        rr={rr}
-                        showRR={false}
-                        iconSize={38}
-                        hideText={true}
-                      />
-                    )}
-                    <div style={{ display: "flex", flexDirection: "column" }}>
-                      <span
-                        style={{
-                          fontSize: 13,
-                          fontWeight: 800,
-                          color: rankInfo?.color || "#fff",
-                        }}
-                      >
-                        {tierName || rankInfo?.name}
-                      </span>
-                      {displayFields.rr && typeof rr === "number" && (
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>
-                          {rr} <span style={{ fontSize: 10, opacity: 0.7 }}>RR</span>
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ) : layout === "banner" ? (
-                  /* BANNER LAYOUT */
-                  <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
-                    {displayFields.rank && (
-                      <RankBadge
-                        tierId={tierId}
-                        tierName={tierName}
-                        rr={rr}
-                        showRR={false}
-                        iconSize={34}
-                        hideText={true}
-                      />
-                    )}
-
-                    <div style={{ marginLeft: "10px", display: "flex", flexDirection: "column" }}>
-                      <span style={s.playerName}>
-                        {data.account?.name || config.playerName}
-                      </span>
-                    </div>
-
-                    <div className="glass-banner-divider" />
-
-                    <div style={{ display: "flex", flexDirection: "column" }}>
-                      <span
-                        style={{
-                          fontSize: 13,
-                          fontWeight: 800,
-                          color: rankInfo?.color || "#fff",
-                        }}
-                      >
-                        {tierName || rankInfo?.name}
-                      </span>
-                      {displayFields.rr && typeof rr === "number" && (
-                        <span style={{ fontSize: 11, fontWeight: 700, color: "#fff" }}>
-                          {rr} RR
-                          {typeof lastChange === "number" && !isDemo && (
-                            <span
-                              style={{
-                                marginLeft: 4,
-                                color: lastChange >= 0 ? "#2dd4a8" : "#ef4444",
-                              }}
-                            >
-                              ({lastChange >= 0 ? "+" : ""}
-                              {lastChange})
-                            </span>
-                          )}
-                        </span>
-                      )}
-                    </div>
-
-                    {displayFields.season && currentSeason && (
-                      <>
-                        <div className="glass-banner-divider" />
-                        <span style={s.metaPill}>{currentSeason.toUpperCase()}</span>
-                      </>
-                    )}
-
-                    <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 5 }}>
-                      <span style={s.liveStatusDot} />
-                    </div>
-                  </div>
-                ) : (
-                  /* STANDARD CARD & CAPSULE */
-                  <>
-                    {displayFields.rank && (
-                      <div style={s.rankSection}>
-                        <RankBadge
-                          tierId={tierId}
-                          tierName={tierName}
-                          rr={displayFields.rr ? rr : undefined}
-                          showRR={displayFields.rr}
-                          iconSize={layout === "capsule" ? 36 : 42}
-                          hideText={layout === "capsule" && !displayFields.rr}
-                        />
-                      </div>
-                    )}
-
-                    <div style={s.infoSection}>
-                      <div style={s.nameRow}>
-                        <span style={s.playerName}>
-                          {data.account?.name || config.playerName}
-                        </span>
-                      </div>
-
-                      <div style={s.metaRow}>
-                        {displayFields.rr &&
-                          typeof lastChange === "number" &&
-                          !isDemo && (
-                            <span
-                              style={{
-                                ...s.metaPill,
-                                background:
-                                  lastChange >= 0
-                                    ? "rgba(45, 212, 168, 0.18)"
-                                    : "rgba(239, 68, 68, 0.18)",
-                                color: lastChange >= 0 ? "#2dd4a8" : "#ef4444",
-                                borderColor:
-                                  lastChange >= 0
-                                    ? "rgba(45, 212, 168, 0.4)"
-                                    : "rgba(239, 68, 68, 0.4)",
-                              }}
-                            >
-                              {lastChange >= 0 ? "+" : ""}
-                              {lastChange} RR
-                            </span>
-                          )}
-
-                        {displayFields.season && currentSeason && (
-                          <span style={s.metaPill}>
-                            {currentSeason.toUpperCase()}
-                          </span>
-                        )}
-
-                        {displayFields.peakRank && peak?.tier && (
-                          <span
-                            style={s.metaPill}
-                            title={`Peak: ${peak.tier.name}`}
-                          >
-                            <TrendingUp size={11} strokeWidth={2.5} aria-hidden="true" /> {peak.tier.name}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div style={s.timeSection}>
-                      <span style={s.timeLabel}>{updatedLabel}</span>
-                      <span style={s.liveStatusDot} />
-                    </div>
-                  </>
-                )}
-              </>
-            )}
-
-            {loading && <div style={s.loadingDot} />}
-          </div>
-        </div>
-
-        {!isDemo && !loading && !rateLimited && (
-          <button
-            type="button"
-            onClick={refresh}
-            style={s.refreshBtn}
-            title="Refresh now"
-            id="overlay-refresh-btn"
-          >
-            <RefreshCw size={14} aria-hidden="true" />
-          </button>
-        )}
-      </div>
+      {/* Theme Component renders its own native internal layout */}
+      <ThemeRenderer
+        theme={theme}
+        config={mergedConfig}
+        rankColor={rankInfo?.color}
+        playerDetails={playerDetails}
+      />
 
       {isDemo && !loading && (
         <div style={s.demoLabel}>
-          Apple Liquid Glass ({layout.toUpperCase()}) Preview — Connect API Key in Setup
+          Live Streamer Studio Overlay ({layout.toUpperCase()}) Preview — Connect API Key in Setup
         </div>
       )}
 
@@ -482,7 +190,7 @@ export default function Overlay({ apiKey, config = {}, backdropBg, onBack }) {
       )}
     </div>
   );
-}
+  }
 
 const s = {
   root: {

@@ -1,30 +1,50 @@
 /**
  * Theme & Layout Registry
  *
- * Provides a modular architecture for game overlay visual themes and layout designs.
- * Allows adding new games (PUBG, Apex, etc.) and layouts seamlessly.
+ * Registered Theme Components & Layouts for stream overlays.
  */
+
+export const THEME_COMPONENTS = [
+  {
+    id: "glass",
+    name: "Glass Theme",
+    componentName: "GlassTheme",
+    badge: "Apple Optics",
+    desc: "Translucent specular glass with animated caustics & SVG liquid refraction map.",
+    icon: "Gem",
+    hasPresets: true,
+  },
+  {
+    id: "retro",
+    name: "Retro Arcade Theme",
+    componentName: "RetroPixelTheme",
+    badge: "8-Bit",
+    desc: "Retro gaming scanlines, pixel art double borders, and arcade marquee styling.",
+    icon: "Gamepad2",
+    hasPresets: true,
+  },
+];
 
 export const VALORANT_LAYOUTS = [
   {
     id: "card",
     name: "Broadcast Card",
     badge: "Popular",
-    desc: "Classic expanded glass card with rank emblem, player tag & live metadata.",
+    desc: "Classic expanded card with rank emblem, player tag & live metadata.",
     icon: "card",
   },
   {
     id: "capsule",
     name: "VisionOS Capsule",
     badge: "Sleek",
-    desc: "Compact pill-shaped glass pod designed for placing near stream webcams.",
+    desc: "Compact pill-shaped pod designed for placing near stream webcams.",
     icon: "capsule",
   },
   {
     id: "banner",
     name: "Streamer Banner Bar",
     badge: "Broadcast",
-    desc: "Full-width horizontal glass ticker bar with rank dividers.",
+    desc: "Full-width horizontal ticker bar with rank dividers.",
     icon: "banner",
   },
   {
