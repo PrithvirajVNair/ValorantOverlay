@@ -151,6 +151,7 @@ export default function Overlay({ apiKey, config = {}, backdropBg, onBack }) {
     layout,
     isDemo,
     loading,
+    showSkeleton: showSkeleton || (loading && !data.account),
   };
 
   return (

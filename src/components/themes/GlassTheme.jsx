@@ -231,7 +231,62 @@ export default function GlassTheme({
 
             {/* Render Content */}
             <div style={s.contentContainer}>
-              {children || (playerDetails && (
+              {children ||
+                (playerDetails?.showSkeleton ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "14px",
+                      width: "100%",
+                      padding: "12px 18px",
+                    }}
+                    id="glass-skeleton-container"
+                  >
+                    <div
+                      className="skeleton-glass"
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: "14px",
+                        background: "rgba(255, 255, 255, 0.14)",
+                        border: "1px solid rgba(255, 255, 255, 0.25)",
+                        flexShrink: 0,
+                      }}
+                    />
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <div
+                        className="skeleton-glass"
+                        style={{
+                          width: 110,
+                          height: 16,
+                          borderRadius: "6px",
+                          background: "rgba(255, 255, 255, 0.16)",
+                        }}
+                      />
+                      <div style={{ display: "flex", gap: "6px" }}>
+                        <div
+                          className="skeleton-glass"
+                          style={{
+                            width: 55,
+                            height: 12,
+                            borderRadius: "4px",
+                            background: "rgba(255, 255, 255, 0.1)",
+                          }}
+                        />
+                        <div
+                          className="skeleton-glass"
+                          style={{
+                            width: 45,
+                            height: 12,
+                            borderRadius: "4px",
+                            background: "rgba(255, 255, 255, 0.1)",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : playerDetails && (
                 <div
                   style={{
                     display: "flex",

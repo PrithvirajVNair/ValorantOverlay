@@ -139,7 +139,62 @@ export default function RetroPixelTheme({
             {/* Content Container */}
             <div style={{ ...s.contentContainer, position: "relative" }}>
               {children ||
-                (playerDetails && (
+                (playerDetails?.showSkeleton ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "14px",
+                      width: "100%",
+                      padding: "10px 16px",
+                    }}
+                    id="retro-skeleton-container"
+                  >
+                    {/* 8-Bit Pixel Rank Emblem Skeleton */}
+                    <div
+                      style={{
+                        width: 46,
+                        height: 46,
+                        background: "rgba(255, 255, 255, 0.08)",
+                        border: `2px solid ${activePreset.border}`,
+                        boxShadow: `0 0 10px ${activePreset.border}55`,
+                        animation: "retroPulse 1.2s infinite ease-in-out",
+                        flexShrink: 0,
+                      }}
+                    />
+
+                    {/* Retro Text Bars Skeleton */}
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <div
+                        style={{
+                          width: "110px",
+                          height: "14px",
+                          background: "rgba(255, 255, 255, 0.15)",
+                          borderLeft: `3px solid ${activePreset.border}`,
+                          animation: "retroPulse 1.2s infinite ease-in-out",
+                        }}
+                      />
+                      <div style={{ display: "flex", gap: "6px" }}>
+                        <div
+                          style={{
+                            width: "55px",
+                            height: "12px",
+                            background: "rgba(255, 255, 255, 0.09)",
+                            animation: "retroPulse 1.2s infinite ease-in-out 0.2s",
+                          }}
+                        />
+                        <div
+                          style={{
+                            width: "40px",
+                            height: "12px",
+                            background: "rgba(255, 255, 255, 0.09)",
+                            animation: "retroPulse 1.2s infinite ease-in-out 0.4s",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : playerDetails && (
                   <>
                     <div
                       style={{

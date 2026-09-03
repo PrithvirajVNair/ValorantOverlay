@@ -438,3 +438,33 @@ button:hover:not(:disabled) {
     padding: 40px 16px !important;
   }
 }
+
+/* ---- Skeleton Loaders ---- */
+@keyframes retroPulse {
+  0%, 100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+.skeleton-glass {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.08) 0%,
+    rgba(255, 255, 255, 0.24) 50%,
+    rgba(255, 255, 255, 0.08) 100%
+  );
+  background-size: 200% 100%;
+  animation: glassShimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes glassShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
